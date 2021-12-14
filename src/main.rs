@@ -1,8 +1,14 @@
-use rocket::{get, launch, post, routes};
+use rocket::{get, launch, post, routes, State};
+use std::sync::Mutex;
 // use tokio::runtime::Builder;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
+
+struct Database {
+    counter: usize,
+    items: Vec<usize>
+}
 
 #[derive(Deserialize, Serialize, Debug)]
 struct User {
@@ -12,7 +18,11 @@ struct User {
 }
 
 #[get("/")]
-async fn index() -> &'static str {
+async fn index(database: &State<Mutex<Database>>) -> &'static str {
+    let mut database = database.lock().unwrap();
+    // let counter = database.counter.lock().unwrap();
+    database.counter+=1;
+    database.items.push (1000);
     "Hello, world!"
 }
 
@@ -53,6 +63,7 @@ fn new_user(user: Json<User>) -> (Status, Result<Json<User>, ()>) {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
+        .manage(Mutex::new(Database { counter: 0, items: vec![] }))
         .mount("/", routes![index, hi, hello, counter, new_user])
         .mount("/hidden", routes![hidden_index])
 }
